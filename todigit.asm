@@ -4,9 +4,12 @@
 .DATA                   ; Variables begin here
     ; num DW 32           ; We initialise num to 32, with the width of 2 bytes
     newline DB 13,10,'$'; Characters 13 and 10 result in a new line
-    second DW 0         ; Start at 0 seconds
-    minute DW 0         ; Start at 0 minutes
-    hour DW 0           ; Start at 0 hours
+    second DW ?         ; Seconds are uninitialised until input is entered
+    minute DW ?         ; Minutes are uninitialised until input is entered
+    hour DW ?           ; Hours are uninitialised until input is entered
+    start_second DW ?         
+    start_minute DW ?         
+    start_hour DW ? 
     msg1 db "Enter HOUR:MINUTE:SECOND$"
 .CODE                   ; Code begins here
 MAIN PROC               ; Begin the main procedure
@@ -16,9 +19,26 @@ MAIN PROC               ; Begin the main procedure
 
     CALL TAKE_INPUT
 
+    CALL PRNTNEWLINE
+
+    INC second
+
     HOUR_LOOP:
         MINUTES_LOOP:
             SECONDS_LOOP:       ; Will loop 60 times
+
+                MOV AX, start_second
+                CMP second, AX
+                JNE PROCEDE
+                MOV AX, start_minute
+                CMP minute, AX
+                JNE PROCEDE
+                MOV AX, start_hour
+                CMP hour, AX
+                JNE PROCEDE
+                JMP QUIT
+                PROCEDE:
+
                 PUSH hour
                 CALL PRINTNUM
 
@@ -49,7 +69,10 @@ MAIN PROC               ; Begin the main procedure
         INC hour
     CMP hour, 12
     JNE HOUR_LOOP
+    MOV hour, 0
+    JMP HOUR_LOOP
 
+    QUIT:
     MOV AH, 4Ch         ; The value "4Ch" in the AH register signifies to the
     INT 21h             ; interupt request that we would like to exit DOS
 MAIN ENDP               ; End of the main procedure
@@ -90,7 +113,7 @@ WASTETIME PROC          ; Start of the waste time procedure
     RET                 ; Returns back to the function it was called from
 WASTETIME ENDP          ; End of the wastetime procedure
                         
-PRNTNEWLINE PROC        ; Star of the newline procedure
+PRNTNEWLINE PROC        ; Start of the newline procedure
     LEA DX, newline     ; Load the newline string into DX
     MOV AH, 09H         ; "9" tells the interupt request that we would like to
     INT 21H             ; print a string!
@@ -111,13 +134,16 @@ TAKE_INPUT PROC
 
     CALL PRNTNEWLINE
     CALL PROMPT_INPUT
-    MOV HOUR, AX
+    MOV hour, AX
+    MOV start_hour, AX
     CALL PRINTCOLON
     CALL PROMPT_INPUT
-    MOV MINUTE, AX
+    MOV minute, AX
+    MOV start_minute, AX
     CALL PRINTCOLON
     CALL PROMPT_INPUT
-    MOV SECOND, AX
+    MOV second, AX
+    MOV start_second, AX
 
     RET
 TAKE_INPUT ENDP
