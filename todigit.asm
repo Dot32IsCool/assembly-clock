@@ -2,29 +2,53 @@
 .STACK 100h             ; Allocates 256 bytes (100h in hex) for the stack
 
 .DATA                   ; Variables begin here
-    num DW 32           ; We initialise num to 32, with the width of 2 bytes
+    ; num DW 32           ; We initialise num to 32, with the width of 2 bytes
     newline DB 13,10,'$'; Characters 13 and 10 result in a new line
     second DW 0         ; Start at 0 seconds
+    minute DW 0         ; Start at 0 minutes
+    hour DW 0           ; Start at 0 hours
+    msg1 db "Enter HOUR:MINUTE:SECOND$"
 .CODE                   ; Code begins here
 MAIN PROC               ; Begin the main procedure
     
     MOV AX, @DATA       ; In order to use our variables, we must initialise
     MOV DS, AX          ; the Data Segment. 
 
-    SECONDS_LOOP:       ; Will loop 60 times
-        
-        CALL PRINTCOLON
+    CALL TAKE_INPUT
 
-        PUSH second     ; Push the current second onto the stack
-        CALL PRINTNUM   ; Print the number we pushed to the stack
+    HOUR_LOOP:
+        MINUTES_LOOP:
+            SECONDS_LOOP:       ; Will loop 60 times
+                PUSH hour
+                CALL PRINTNUM
 
-        CALL PRNTNEWLINE; Prints a new line 
+                CALL PRINTCOLON
 
-        CALL WASTETIME  ; Slows the programs execution speed
+                PUSH minute
+                CALL PRINTNUM
 
-        INC second      ; Add one to the second variable
-    CMP second, 60      ; Compare the current second with 60
-    JNE SECONDS_LOOP    ; If they are equal, dont continue the loop
+                CALL PRINTCOLON
+
+                PUSH second     ; Push the current second onto the stack
+                CALL PRINTNUM   ; Print the number we pushed to the stack
+
+                CALL PRNTNEWLINE; Prints a new line 
+
+                CALL WASTETIME  ; Slows the programs execution speed
+
+                INC second      ; Add one to the second variable
+            CMP second, 60      ; Compare the current second with 60
+            JNE SECONDS_LOOP    ; If they are equal, dont continue the loop
+
+            MOV second, 0
+            INC minute
+        CMP minute, 60
+        JNE MINUTES_LOOP
+
+        MOV minute, 0
+        INC hour
+    CMP hour, 12
+    JNE HOUR_LOOP
 
     MOV AH, 4Ch         ; The value "4Ch" in the AH register signifies to the
     INT 21h             ; interupt request that we would like to exit DOS
@@ -32,7 +56,7 @@ MAIN ENDP               ; End of the main procedure
 
 PRINTNUM PROC           ; Begin the PRINTNUM procedure
     POP DX              ; Pop the return address (IP) from the stack into DX
-    POP AX              ; Pop the 2 digit number from the stack into AX
+    POP AX              ; Pop the two digit number from the stack into AX
     PUSH DX             ; Push the return address back onto the stack
 
     MOV BL, 10          ; We move 10 into BL, so that we can divide AX by 10
@@ -59,7 +83,7 @@ PRINTNUM PROC           ; Begin the PRINTNUM procedure
 PRINTNUM ENDP           ; Ends the PRINTNUM procedure
 
 WASTETIME PROC          ; Start of the waste time procedure
-    MOV CX, 10000       ; The larger this number, the larger the delay
+    MOV CX, 50          ; The larger this number, the larger the delay
     DELAY:              ; This loop will waste CPU cyrcles, slowing the
         XOR AX, AX      ; program's execution
     LOOP DELAY          ; LOOP automatically JMP's and decriments CX, until CX=0
@@ -79,5 +103,38 @@ PRINTCOLON PROC
     INT 21H
     RET
 PRINTCOLON ENDP
+
+TAKE_INPUT PROC
+    MOV AH, 09H
+    LEA DX, msg1
+    INT 21h
+
+    CALL PRNTNEWLINE
+    CALL PROMPT_INPUT
+    MOV HOUR, AX
+    CALL PRINTCOLON
+    CALL PROMPT_INPUT
+    MOV MINUTE, AX
+    CALL PRINTCOLON
+    CALL PROMPT_INPUT
+    MOV SECOND, AX
+
+    RET
+TAKE_INPUT ENDP
+
+PROMPT_INPUT PROC
+    ; Print zero
+    MOV DL, '0'
+    MOV AH, 2
+    INT 21H
+
+    ; Take input
+    MOV AH, 1
+    INT 21H
+    SUB AL, 48
+    XOR AH, AH
+
+    RET
+PROMPT_INPUT ENDP
 
 END MAIN                ; Terminates the program
